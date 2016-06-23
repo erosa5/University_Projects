@@ -20,34 +20,32 @@ ConsoleColor eatableDots = ConsoleColor::DarkGray;
 
 class Entity {
 public:
-	float x = 20.0f, y = 25.0f, Speed = 0.15f;
-	int Dir = 4, nextDir = 4;
+	float x = 20.0f, y = 25.0f, Speed = 0.15f, ghostSpeed = 0.1f;
+	int Dir = 4, nextDir = 4, initX, initY, initDir;
 	ConsoleColor Color = ConsoleColor::Yellow;
-	bool Updated = false, isGhost = false, oS = false, oC = false;
+	ConsoleColor Dizzy = ConsoleColor::DarkGray;
+	bool Updated = false, isGhost = false, oS = false, oC = false, ghostDizzy = false;
 
 	void move() {
 		if (Dir == 0) {
 			if (x > Console::BufferWidth - 2) { x = Console::BufferWidth - 2; }
-			else { x += Speed; }
+			else { x += isGhost ? (ghostDizzy ? (ghostSpeed / 3) : ghostSpeed) : Speed; }
 		}
 		else if (Dir == 2) {
 			if (x <= 0) { x = 0; }
-			else { x -= Speed; }
+			else { x -= isGhost ? (ghostDizzy ? (ghostSpeed / 3) : ghostSpeed) : Speed; }
 		}
 		else if (Dir == 1) {
 			if (y <= 0) { y = 0; }
-			else { y -= Speed; }
+			else { y -= isGhost ? (ghostDizzy ? (ghostSpeed / 3) : ghostSpeed) : Speed; }
 		}
 		else if (Dir == 3) {
 			if (y > Console::BufferHeight - 1) { y = Console::BufferHeight - 1; }
-			else { y += Speed; }
+			else { y += isGhost ? (ghostDizzy ? (ghostSpeed / 3) : ghostSpeed) : Speed; }
 		}
 		else {}
 		update();
 	}
-
-private:
-	int prevX = 0, prevY = 0;
 	void update() {
 		if (int(x) != prevX || int(y) != prevY) {
 			if (!isGhost) {
@@ -69,12 +67,15 @@ private:
 
 				}
 			}
-			printC(x, y, isGhost ? ghostChar : pacManChar, Color);
+			printC(x, y, isGhost ? ghostChar : pacManChar, ghostDizzy ? Dizzy : Color);
 			prevX = int(x);
 			prevY = int(y);
 			Updated = true;
 		}
 	}
+
+private:
+	int prevX = 0, prevY = 0;
 };
 class crossPoints {
 public:
@@ -209,16 +210,16 @@ void drawDots(int a, int b, int c, int d, bool wFood) {
 
 int main() {
 	Console::CursorVisible = false;
-	Console::SetWindowSize(100, 60);
-	Console::SetBufferSize(100, 60);
+	Console::SetWindowSize(32, 37);
+	Console::SetBufferSize(32, 37);
 
 	crossPoints B[maxCrossPoints];
 	Entity A, G[4];
 
 	srand(time(NULL));
 
-	int Score = -1, x, y;
-	bool Playing = false;
+	int Score = -1, x, y, Timer = 0, fps = 60, DizzyTime = 10;
+	bool Playing = false, ghostsDizzy = false;
 
 	/* DRAW SCENARIO */
 	do {
@@ -291,6 +292,7 @@ int main() {
 		B[64].setPos(x + 28, y + 5);
 		B[65].setPos(x + 28, y + 1);
 		B[66].setPos(B[43].x, B[43].y + 3);
+		B[67].setPos(B[42].x, B[42].y + 3);
 		drawDots(B[0].x, B[0].y, B[1].x, B[1].y, true);
 		drawDots(B[2].x, B[2].y, B[1].x, B[1].y, true);
 		drawDots(B[2].x, B[2].y, B[3].x, B[3].y, true);
@@ -365,7 +367,6 @@ int main() {
 		drawDots(B[63].x, B[63].y, B[55].x, B[55].y, true);
 		drawDots(B[57].x, B[57].y, B[64].x, B[64].y, true);
 		drawDots(B[57].x, B[57].y, B[55].x, B[55].y, true);
-
 		B[0].setOpen(1, 1, 0, 0);
 		B[1].setOpen(1, 1, 1, 0);
 		B[2].setOpen(1, 1, 1, 0);
@@ -433,11 +434,12 @@ int main() {
 		B[64].setOpen(0, 1, 1, 1);
 		B[65].setOpen(0, 0, 1, 1);
 		B[66].setOpen(0, 1, 0, 0);
+		B[67].setOpen(0, 1, 0, 0);
 
 		A.x = B[15].x + abs((B[15].x - B[16].x) / 2);
 		A.y = B[15].y;
 		for (int i = 0; i < maxCrossPoints; i++) {
-			if (B[i].Active && i != 66) {
+			if (B[i].Active && i != 66 && i != 67) {
 				//printC(B[i].x, B[i].y, 254, ConsoleColor::White);
 
 				// Up-Right
@@ -537,34 +539,47 @@ int main() {
 		G[0].x = B[42].x - 1;
 		G[0].y = B[42].y + 3;
 		G[0].Color = ConsoleColor::Cyan;
-
 		G[1].x = B[42].x + 1;
 		G[1].y = B[42].y + 3;
 		G[1].Color = ConsoleColor::Magenta;
-
 		G[2].x = B[43].x;
 		G[2].y = B[43].y + 3;
 		G[2].Color = ConsoleColor::Red;
-
 		G[3].x = B[43].x;
 		G[3].y = B[43].y;
 		G[3].Color = ConsoleColor::Green;
+		G[0].initX = G[0].x;
+		G[0].initY = G[0].y;
+		G[1].initX = G[1].x;
+		G[1].initY = G[1].y;
+		G[2].initX = G[2].x;
+		G[2].initY = G[2].y;
+		G[3].initX = G[2].x;
+		G[3].initY = G[2].y;
+		G[0].Dir = 0;
+		G[1].Dir = 2;
+		G[2].Dir = 1;
+		G[3].Dir = rand() % 4;
+		G[0].initDir = 0;
+		G[1].initDir = 2;
+		G[2].initDir = 1;
+		G[3].initDir = 1;
+
+		for (int i = 0; i < 4; i++) {
+			G[i].isGhost = true;
+		}
+
+		A.update();
+		for (int i = 0; i < 4; i++) { G[i].update(); }
 
 	} while (false);
-	G[0].Dir = 0;
-	G[1].Dir = 0;
-	G[2].Dir = 1;
-	G[3].Dir = rand() % 4;
 
-	for (int i = 0; i < 4; i++) {
-		G[i].Speed = 0.05;
-		G[i].isGhost = true;
-	}
 
 	int g = maxFood - 1;
 	for (int i = 0; i < maxCrossPoints; i++) {
 		if (i != 40 && i != 42 && i != 43 && i != 41 && i != 35 &&
-			i != 39 && i != 38 && i != 34 && i != 66) {
+			i != 39 && i != 38 && i != 34 && i != 66 && i != 67 &&
+			i != 36 && i != 37) {
 			Food[g].Visible = true;
 			Food[g].x = B[i].x;
 			Food[g].y = B[i].y;
@@ -630,8 +645,10 @@ int main() {
 			}
 		}
 
-		A.move();
-		for (int i = 0; i < 4; i++) { G[i].move(); }
+		if (Playing) {
+			A.move();
+			for (int i = 0; i < 4; i++) { G[i].move(); }
+		}
 
 		if (int(A.x) < B[36].x - 1) {
 			A.x = float(B[37].x) + 1;
@@ -655,9 +672,6 @@ int main() {
 						}
 					}
 				}
-				/*else {
-				printC(B[i].x, B[i].y, 254, ConsoleColor::White);
-				}*/
 			}
 		}
 		for (int i = 0; i < maxCrossPoints; i++) {
@@ -710,6 +724,29 @@ int main() {
 					}
 				}
 			}
+			if (int(G[j].x) == int(A.x) && int(G[j].y) == int(A.y)) {
+				if (G[j].ghostDizzy) {
+					Score += 50;
+					G[j].x = G[j].initX;
+					G[j].y = G[j].initY;
+					G[j].ghostDizzy = false;
+					G[j].Dir = G[j].initDir;
+					G[j].nextDir = G[j].initDir;
+				}
+				else {
+					printC(x + 10, y + 32, "GAME OVER", ConsoleColor::White);
+					Timer = 0;
+					while (true) {
+						Timer += 1000 / fps;
+						if (Timer >= 1000) {
+							if (Console::KeyAvailable) {
+								goto GAMEOVER;
+							}
+						}
+						Thread::Sleep(1000 / fps);
+					}
+				}
+			}
 		}
 
 		if (A.Updated) {
@@ -717,6 +754,14 @@ int main() {
 				if (Food[i].Active && Food[i].x == int(A.x) && Food[i].y == int(A.y)) {
 					Food[i].Active = false;
 					if (Food[i].Special) {
+						for (int j = 0; j < 4; j++) {
+							G[j].ghostDizzy = true;
+							if (G[j].Dir == 0) { G[j].Dir = 2; }
+							else if (G[j].Dir == 1) { G[j].Dir = 3; }
+							else if (G[j].Dir == 2) { G[j].Dir = 0; }
+							else if (G[j].Dir == 3) { G[j].Dir = 1; }
+						}
+						ghostsDizzy = true;
 						Score += 9;
 					}
 					else {
@@ -725,17 +770,25 @@ int main() {
 				}
 			}
 		}
+		if (ghostsDizzy) {
+			Timer += 1000 / fps;
+			if ((Timer / 1000) == DizzyTime) {
+				for (int j = 0; j < 4; j++) {
+					G[j].ghostDizzy = false;
+					if (G[j].Dir == 0) { G[j].Dir = 2; }
+					else if (G[j].Dir == 1) { G[j].Dir = 3; }
+					else if (G[j].Dir == 2) { G[j].Dir = 0; }
+					else if (G[j].Dir == 3) { G[j].Dir = 1; }
+				}
+				Timer = 0;
+			}
+		}
 
 		printC(x, 1, "SCORE: ", int(Score), ConsoleColor::White);
-		//printC(0, 1, "MaxScore: ", int(foodCount), ConsoleColor::White);
-		//printC(0, 2, "Dir: ", int(A.Dir), ConsoleColor::White);
-		//printC(0, 3, "nextDir: ", int(A.nextDir), ConsoleColor::White);
-		//Console::SetCursorPosition(0, 2); printf("Player: (%d,%d)   ", int(A.x), int(A.y));
 
-		Thread::Sleep(1000 / 60);
+		Thread::Sleep(1000 / fps);
 
 	} while (true);
-
-	system("pause");
+GAMEOVER:
 	return 0;
 }
