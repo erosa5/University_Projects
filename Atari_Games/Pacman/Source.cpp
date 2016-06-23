@@ -218,7 +218,7 @@ int main() {
 
 	srand(time(NULL));
 
-	int Score = -1, x, y, Timer = 0, fps = 60, DizzyTime = 10;
+	int Score = -1, x, y, Timer = 0, fps = 60, DizzyTime = 5, counter = 0;
 	bool Playing = false, ghostsDizzy = false;
 
 	/* DRAW SCENARIO */
@@ -648,6 +648,7 @@ int main() {
 		if (Playing) {
 			A.move();
 			for (int i = 0; i < 4; i++) { G[i].move(); }
+			counter += 1000 / fps;
 		}
 
 		if (int(A.x) < B[36].x - 1) {
@@ -666,10 +667,8 @@ int main() {
 						A.Dir = 4;
 						A.nextDir = 4;
 					}
-					else {
-						if (B[i].sideOn[A.nextDir]) {
-							A.Dir = A.nextDir;
-						}
+					else if (B[i].sideOn[A.nextDir]) {
+						A.Dir = A.nextDir;
 					}
 				}
 			}
@@ -785,6 +784,7 @@ int main() {
 		}
 
 		printC(x, 1, "SCORE: ", int(Score), ConsoleColor::White);
+		printC(x + 15, 1, "TIME: ", int(counter/1000), ConsoleColor::White);
 
 		Thread::Sleep(1000 / fps);
 
