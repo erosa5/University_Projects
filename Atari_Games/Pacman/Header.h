@@ -15,7 +15,7 @@ void printC(int x, int y, char str[150], ConsoleColor cor) {
 		}
 	}
 }
-
+ 
 void printC(int x, int y, char str, ConsoleColor cor) {
 	Console::ForegroundColor = cor;
 	Console::SetCursorPosition(x, y);
